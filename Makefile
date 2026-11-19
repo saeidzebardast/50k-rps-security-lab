@@ -1,5 +1,7 @@
-# Works with Docker or Podman. Override with: make up ENGINE=docker
-ENGINE  ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
+# Works with Podman or Docker; Podman wins when both are installed.
+# The macOS Podman installer puts the binary in /opt/podman/bin, which is not
+# always on PATH. Override with: make up ENGINE=docker
+ENGINE  ?= $(shell command -v podman 2>/dev/null || { [ -x /opt/podman/bin/podman ] && echo /opt/podman/bin/podman; } || echo docker)
 COMPOSE ?= $(ENGINE) compose
 PY      ?= python3
 

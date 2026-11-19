@@ -15,7 +15,7 @@ One script attacks all eight builds and prints a PASS/FAIL matrix.
 
 ## Quick start
 
-You need Docker or Podman, plus Python 3.9+ for the attack script (standard library only, no `pip install`).
+You need Podman or Docker, plus Python 3.9+ for the attack script (standard library only, no `pip install`).
 
 ```bash
 git clone <this repo> && cd 50k-rps-security-lab
@@ -24,13 +24,30 @@ make attack    # run every attack against every target (~5 min)
 make down
 ```
 
-`make` picks `podman compose` when Podman is installed and `docker compose` otherwise. Force one with
-`make up ENGINE=docker`. Without `make`:
+`make` picks `podman compose` when Podman is installed (including `/opt/podman/bin`, where the macOS
+installer puts it) and `docker compose` otherwise. Force one with `make up ENGINE=docker`. Without `make`:
 
 ```bash
 docker compose up -d --build      # or: podman compose up -d --build
 python3 attacks/lab.py
 ```
+
+### Podman notes
+
+- `podman compose` needs a compose provider: either `docker-compose` or `podman-compose` on PATH
+  (`brew install podman-compose`). Podman Desktop can install one for you.
+- The Podman machine needs about 3 GB of RAM for all nine containers. The default machine (4 GB) is enough.
+- If builds fail with `unable to retrieve auth token: invalid username/password`, Podman is sending stale
+  Docker Hub credentials. Either run `podman login docker.io` again, or pre-pull the base images
+  anonymously and build again:
+
+  ```bash
+  echo '{}' > /tmp/empty-auth.json
+  for i in golang:1.26-alpine maven:3.9-eclipse-temurin-21 eclipse-temurin:21-jre python:3.13-slim \
+           node:24-alpine nginx:1.29-alpine gcr.io/distroless/static-debian12:nonroot; do
+    podman pull --authfile /tmp/empty-auth.json "$i"
+  done
+  ```
 
 Run part of the matrix:
 
@@ -77,7 +94,8 @@ Every app serves the same routes: `GET /healthz`, `GET /search?q=` (slug validat
 
 ## Results
 
-Apple Silicon (M-series, 14 cores), Docker Desktop, 2 CPUs per container:
+Apple Silicon (M-series, 14 cores), 2 CPUs per container. Docker Desktop 29 and Podman 6.1 (libkrun)
+give the same verdicts, and their numbers are within run-to-run noise of each other.
 
 ```
                     body       redos      blocking   slowloris  xff        actuator
