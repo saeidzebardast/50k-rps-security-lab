@@ -168,3 +168,7 @@ uvicorn vulnerable:app --port 8001            # second terminal: uvicorn hardene
 Gin needs Go 1.26+ (`cd gin && go run ./hardened` with `TRUSTED_PROXIES=none`). Spring needs JDK 21+ and
 Maven (`cd spring && mvn spring-boot:run -Dspring-boot.run.profiles=hardened`). Their ports differ from
 the table above, so pass them explicitly: `python3 attacks/lab.py gin=http://127.0.0.1:8080`.
+
+## License
+
+[MIT](LICENSE)
