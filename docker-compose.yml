@@ -1,0 +1,88 @@
+# Every framework twice: as tutorials ship it, and with the article's controls.
+#
+#               vulnerable   hardened
+#   express     :3001        :3002
+#   fastapi     :8001        :8002  (nginx -> uvicorn)
+#   gin         :8081        :8082
+#   spring      :9001        :9002  (actuator on 9090, not published)
+#
+# Each app gets the same CPU budget so results are comparable.
+
+x-limits: &limits
+  cpus: "2"
+  mem_limit: 768m
+  restart: unless-stopped
+
+networks:
+  lab:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+services:
+  express-vulnerable:
+    <<: *limits
+    build: { context: ./express, args: { APP: vulnerable } }
+    ports: ["3001:3000"]
+    networks: [lab]
+
+  express-hardened:
+    <<: *limits
+    build: { context: ./express, args: { APP: hardened } }
+    ports: ["3002:3000"]
+    networks: [lab]
+
+  fastapi-vulnerable:
+    <<: *limits
+    build: ./fastapi
+    command: ["uvicorn", "vulnerable:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports: ["8001:8000"]
+    networks: [lab]
+
+  fastapi-hardened-app:
+    <<: *limits
+    build: ./fastapi
+    # Only believe X-Forwarded-For from our own nginx, by IP.
+    command: ["uvicorn", "hardened:app", "--host", "0.0.0.0", "--port", "8000",
+              "--proxy-headers", "--forwarded-allow-ips", "172.28.0.10",
+              "--timeout-keep-alive", "5", "--limit-concurrency", "2000"]
+    networks: [lab]   # not published: only reachable through nginx
+
+  fastapi-hardened:
+    <<: *limits
+    image: nginx:1.29-alpine
+    volumes: ["./fastapi/nginx.conf:/etc/nginx/nginx.conf:ro"]
+    depends_on: [fastapi-hardened-app]
+    ports: ["8002:8080"]
+    networks:
+      lab: { ipv4_address: 172.28.0.10 }
+
+  gin-vulnerable:
+    <<: *limits
+    build: ./gin
+    entrypoint: ["/app/vulnerable"]
+    ports: ["8081:8080"]
+    networks: [lab]
+
+  gin-hardened:
+    <<: *limits
+    build: ./gin
+    entrypoint: ["/app/hardened"]
+    environment:
+      TRUSTED_PROXIES: "none"   # nothing sits in front of it in this lab
+    ports: ["8082:8080"]
+    networks: [lab]
+
+  spring-vulnerable:
+    <<: *limits
+    build: ./spring
+    environment: { SPRING_PROFILES_ACTIVE: vulnerable }
+    ports: ["9001:8080"]
+    networks: [lab]
+
+  spring-hardened:
+    <<: *limits
+    build: ./spring
+    environment: { SPRING_PROFILES_ACTIVE: hardened }
+    ports: ["9002:8080"]   # 9090 (actuator) deliberately not published
+    networks: [lab]
