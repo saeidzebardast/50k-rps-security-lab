@@ -1,7 +1,7 @@
 # 50k RPS Security Lab
 
 Companion code for **[50k RPS Is a Security Problem, Not a Benchmark](https://medium.com/@saeid/50k-rps-is-a-security-problem-not-a-benchmark-b7848751f9f7)**
-(also on [zebardast.com](https://zebardast.com)).
+(also on [zebardast.com](https://zebardast.com/blog/50k-rps-is-a-security-problem)).
 
 The article looks at how Express.js, FastAPI, Gin and Spring Boot fail under hostile traffic. This repo lets
 you reproduce those failures on your own machine. Each framework comes in two builds:
